@@ -115,9 +115,9 @@ func TestIntegration_MysqlPipeline(t *testing.T) {
 	runPipe = defaultRunPipe
 
 	// 1. Setup Test Configuration
-	sourceURI := getEnvOrDefault("TEST_MYSQL_SOURCE_URI", "mysql://root:secret@localhost:3306/source_db")
-	transformURI := getEnvOrDefault("TEST_MYSQL_TRANSFORM_URI", "mysql://root:secret@localhost:3306/transform_db")
-	destURI := getEnvOrDefault("TEST_MYSQL_DEST_URI", "mysql://root:secret@localhost:3306/dest_db")
+	sourceURI := getEnvOrDefault("TEST_MYSQL_SOURCE_URI", "mysql://root:secret@127.0.0.1:3306/source_db")
+	transformURI := getEnvOrDefault("TEST_MYSQL_TRANSFORM_URI", "mysql://root:secret@127.0.0.1:3306/transform_db")
+	destURI := getEnvOrDefault("TEST_MYSQL_DEST_URI", "mysql://root:secret@127.0.0.1:3306/dest_db")
 
 	cfg := SyncConfig{
 		DBType:       "mysql",

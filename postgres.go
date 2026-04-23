@@ -60,10 +60,11 @@ func transformPostgres(cfg SyncConfig, dataPath, transformedPath string) error {
 		"--format=d",
 		"--jobs", cfg.Threads,
 		"--clean",
+		"--if-exists",
 		dataPath,
 	}
 	if err := runCmd("pg_restore", pgRestoreArgs...); err != nil {
-		log.Info().Msgf("pg_restore completed (may have warnings): %v\n", err)
+		return fmt.Errorf("pg_restore failed: %w", err)
 	}
 
 	log.Info().Msg("Executing anonymisation scripts...")
@@ -98,7 +99,7 @@ func restorePostgres(cfg SyncConfig, dataPath string) error {
 	}
 	destDBName := extractDBName(cfg.DestURI)
 	if destDBName == "" {
-		return fmt.Errorf("Postgres restore requires a target database name in the DEST_URI")
+		return fmt.Errorf("postgres restore requires a target database name in the DEST_URI")
 	}
 
 	tmpDBName := destDBName + "_tmp"

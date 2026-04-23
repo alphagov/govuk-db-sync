@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - ".git**"
+      - README.md
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  go-unit-tests:
+    name: Go Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          show-progress: false
+
+      - name: Download Go Dependencies
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run Go Unit Tests
+        run: go run gotest.tools/gotestsum@v1.13.0 --format testname -- ./...
+        timeout-minutes: 5
+  go-integration-tests:
+    name: Go Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      mongo-test:
+        image: mongo:3.6
+        env:
+          MONGO_INITDB_ROOT_PASSWORD: secret
+          MONGO_INITDB_ROOT_USERNAME: mongoadmin
+        ports:
+          - 27017:27017
+      mysql-test:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: secret
+        ports:
+          - 3306:3306
+      postgres-test:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+    env:
+      TEST_PG_ADMIN_URI: postgres://postgres:secret@localhost:5432/postgres?sslmode=disable
+      TEST_PG_SOURCE_URI: postgres://postgres:secret@localhost:5432/source_db?sslmode=disable
+      TEST_PG_TRANSFORM_URI: postgres://postgres:secret@localhost:5432/transform_db?sslmode=disable
+      TEST_PG_DEST_URI: postgres://postgres:secret@localhost:5432/dest_db?sslmode=disable
+      TEST_MYSQL_SOURCE_URI: mysql://root:secret@127.0.0.1:3306/source_db
+      TEST_MYSQL_TRANSFORM_URI: mysql://root:secret@127.0.0.1:3306/transform_db
+      TEST_MYSQL_DEST_URI: mysql://root:secret@127.0.0.1:3306/dest_db
+      TEST_MONGO_SOURCE_URI: mongodb://mongoadmin:secret@localhost:27017/source_db?authSource=admin
+      TEST_MONGO_TRANSFORM_URI: mongodb://mongoadmin:secret@localhost:27017/transform_db?authSource=admin
+      TEST_MONGO_DEST_URI: mongodb://mongoadmin:secret@localhost:27017/dest_db?authSource=admin
+      RUN_INTEGRATION_TESTS: "1"
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          show-progress: false
+
+      - name: Download Go Dependencies
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install Database Tools
+        run: |
+          wget -qO /tmp/libssl.deb http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+          sudo dpkg -i /tmp/libssl.deb
+          sudo mkdir -p /etc/apt/keyrings
+          wget -O- 'https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x1D357EA7D10C9320371BDD0279EA15C0E82E34BA&exact=on' | sudo tee /etc/apt/keyrings/mydumper.asc > /dev/null
+          wget -O- 'https://www.postgresql.org/media/keys/ACCC4CF8.asc' | sudo tee /etc/apt/keyrings/pgdg.asc > /dev/null
+          wget -O- 'https://www.mongodb.org/static/pgp/server-4.4.asc' | sudo tee /etc/apt/keyrings/mongodb.asc > /dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/mydumper.asc] https://mydumper.github.io/mydumper/repo/apt/ubuntu $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/mydumper.list > /dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/pgdg.asc] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/mongodb.asc] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends mysql-client postgresql-client mydumper mongodb-org-tools mongodb-org-shell zstd
+
+      - name: Run Go Integration Tests
+        run: go run gotest.tools/gotestsum@v1.13.0 --format testname -- -run Integration ./...
+        timeout-minutes: 5
+  golangci-lint:
+    name: Go Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          show-progress: false
+
+      - name: Download Go Dependencies
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run Go Lint
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+  codeql-sast:
+    name: CodeQL SAST scan
+    uses: alphagov/govuk-infrastructure/.github/workflows/codeql-analysis.yml@main
+    permissions:
+      security-events: write

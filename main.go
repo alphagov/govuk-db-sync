@@ -309,7 +309,7 @@ func NewApp() *cli.Command {
 					}(dataPath)
 
 					if err = exportData(cfg, dataPath); err != nil {
-						return fmt.Errorf("Export Phase failed: %w", err)
+						return fmt.Errorf("export phase failed: %w", err)
 					}
 
 					rawSize, _ := getDirSize(dataPath)
@@ -320,7 +320,7 @@ func NewApp() *cli.Command {
 							log.Info().Msgf("Transform script '%s' not found. Skipping Transform Phase as Dry-Run is enabled...", cfg.TransformScript)
 						} else {
 							if dataPath, err = transformData(cfg, dataPath); err != nil {
-								return fmt.Errorf("Transform Phase failed: %w", err)
+								return fmt.Errorf("transform phase failed: %w", err)
 							}
 							transSize, _ := getDirSize(dataPath)
 							log.Info().Msgf("Transformed data size: %s", humanize.Bytes(uint64(transSize)))
@@ -332,7 +332,7 @@ func NewApp() *cli.Command {
 					var archiveSize int64
 					archiveSize, err = uploadToS3(cfg, dataPath)
 					if err != nil {
-						return fmt.Errorf("S3 Upload Phase failed: %w", err)
+						return fmt.Errorf("s3 upload phase failed: %w", err)
 					}
 
 					finishTime := time.Now()
@@ -368,11 +368,11 @@ func NewApp() *cli.Command {
 					var downloadedPath string
 					downloadedPath, _, err = downloadFromS3(cfg)
 					if err != nil {
-						return fmt.Errorf("S3 Download Phase failed: %w", err)
+						return fmt.Errorf("s3 download phase failed: %w", err)
 					}
 
 					if err = restoreData(cfg, downloadedPath); err != nil {
-						return fmt.Errorf("Restore Phase failed: %w", err)
+						return fmt.Errorf("restore phase failed: %w", err)
 					}
 
 					finishTime := time.Now()

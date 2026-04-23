@@ -274,7 +274,7 @@ func TestCLI_Backup_DeferredCleanup_OnFailure(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Export Phase failed")
+	assert.Contains(t, err.Error(), "export phase failed")
 	assert.Contains(t, err.Error(), "mocked pg_dump fatal error")
 
 	// Verify that even though the app violently crashed, the defer block caught the mess
@@ -302,7 +302,7 @@ func TestCLI_Backup_TransformURI_Validation(t *testing.T) {
 	})
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Transform Phase failed")
+	assert.Contains(t, err.Error(), "transform phase failed")
 	assert.Contains(t, err.Error(), "transform URI is required") // Should catch the missing URI instantly
 }
 
