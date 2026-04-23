@@ -1,0 +1,107 @@
+services:
+  db-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: db-sync
+    cpus: 8
+    volumes:
+      - ./tmp:/tmp
+      - ./transform_scripts:/transform_scripts
+    depends_on:
+      - mongo-sidecar
+      - mysql-sidecar
+      - postgres-sidecar
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Local Mongo Sidecar for Transformation
+  mongo-sidecar:
+    image: mongo:3.6
+    container_name: mongo-sidecar
+    environment:
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+      - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+    ports:
+      - "27018:27017"
+
+  # Local MySQL Sidecar for Transformation
+  mysql-sidecar:
+    image: mysql:8.4
+    container_name: mysql-sidecar
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+    ports:
+      - "3307:3306"
+
+  # Local Postgres Sidecar for Transformation
+  postgres-sidecar:
+    image: postgres:17-alpine
+    container_name: postgres-sidecar
+    environment:
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_USER=postgres
+    ports:
+      - "5433:5432"
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: db-sync-test
+    volumes:
+      - ./tmp:/tmp
+      - ./transform_scripts:/transform_scripts
+    depends_on:
+      - mongo-sidecar
+      - mongo-test
+      - mysql-sidecar
+      - mysql-test
+      - postgres-sidecar
+      - postgres-test
+    environment:
+      - TEST_S3_BUCKET=govuk-integration-rds-dumps
+      - RUN_SMOKE_TESTS=1
+      - RUN_CONTRACT_TESTS=1
+      - RUN_INTEGRATION_TESTS=1
+      - TEST_PG_ADMIN_URI=postgres://postgres:secret@postgres-sidecar:5432/postgres?sslmode=disable
+      - TEST_PG_SOURCE_URI=postgres://postgres:secret@postgres-sidecar:5432/source_db?sslmode=disable
+      - TEST_PG_TRANSFORM_URI=postgres://postgres:secret@postgres-sidecar:5432/transform_db?sslmode=disable
+      - TEST_PG_DEST_URI=postgres://postgres:secret@postgres-test:5432/dest_db?sslmode=disable
+      - TEST_MYSQL_SOURCE_URI=mysql://root:secret@mysql-sidecar:3306/source_db
+      - TEST_MYSQL_TRANSFORM_URI=mysql://root:secret@mysql-sidecar:3306/transform_db
+      - TEST_MYSQL_DEST_URI=mysql://root:secret@mysql-test:3306/dest_db
+      - TEST_MONGO_SOURCE_URI=mongodb://mongoadmin:secret@mongo-sidecar:27017/source_db?authSource=admin
+      - TEST_MONGO_TRANSFORM_URI=mongodb://mongoadmin:secret@mongo-sidecar:27017/transform_db?authSource=admin
+      - TEST_MONGO_DEST_URI=mongodb://mongoadmin:secret@mongo-test:27017/dest_db?authSource=admin
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Local Mongo Sidecar for Transformation
+  mongo-test:
+    image: mongo:3.6
+    container_name: mongo-test
+    environment:
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+      - MONGO_INITDB_ROOT_USERNAME=mongoadmin
+    ports:
+      - "27019:27017"
+
+  # Local MySQL Container for Testing Restores
+  mysql-test:
+    image: mysql:8.4
+    container_name: mysql-test
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+    ports:
+      - "3308:3306"
+
+  # Local Postgres Container for Testing Restores
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: postgres-test
+    environment:
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_USER=postgres
+    ports:
+      - "5434:5432"
