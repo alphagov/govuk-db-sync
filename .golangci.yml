@@ -16,6 +16,7 @@ linters:
         - os.MkdirAll
         - os.WriteFile
         - os.Hostname
+        - (io.ReadCloser).Close
         - (*net/url.URL).Parse
         - (*os/exec.Cmd).StdoutPipe
         - (*strings.Builder).WriteString
