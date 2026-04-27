@@ -1,0 +1,22 @@
+version: "2"
+
+linters:
+  default: standard
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - (*os.File).Close
+        - (*os.File).Stat
+        - os.Remove
+        - os.RemoveAll
+        - os.Create
+        - os.CreateTemp
+        - os.MkdirAll
+        - os.WriteFile
+        - os.Hostname
+        - (io.ReadCloser).Close
+        - (*net/url.URL).Parse
+        - (*os/exec.Cmd).StdoutPipe
+        - (*strings.Builder).WriteString
