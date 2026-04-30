@@ -49,10 +49,10 @@ RUN apt-get update && \
 
 WORKDIR /app
 
+# Copy the transformation scripts
+COPY transform_scripts /scripts
+
 # Copy the compiled bins from builder stage
 COPY --from=builder /app/db-sync /usr/local/bin/db-sync
-
-# Create directory for transformation scripts
-RUN mkdir -p /scripts
 
 ENTRYPOINT [ "db-sync" ]
